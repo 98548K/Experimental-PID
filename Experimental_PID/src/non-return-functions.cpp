@@ -1,10 +1,10 @@
 #include "vex.h"
 
 
-//Add other situations here:
+//Basic, Long distance, Short distance:
 void schedule(const char* gainSchedule) {
     if (gainSchedule == "Basic") {
-        kP = 1.0;
+        kP = 0.0;
         kI = 0.0;
         kD = 0.0;
         turnKP = 0.0;
@@ -20,12 +20,14 @@ void prevUpdate() {
     prevPwr = output;
     prevError = error;
     prevTime = Brain.timer(sec);
-    pref = ef;
+    prevDerivative = derivative;
 }
 
 void storeValues() {
     storedTrackingMeasurements = (frontTracking.position(turns)) * (wheelRad * 2) * M_PI;
     storedHeading = Inertial1.heading(deg);
+
+    //Other stored values above <PID_Tag>
     startTimer = Brain.timer(sec);
     Brain.resetTimer();
 }
@@ -50,16 +52,22 @@ void printAtTop(const char * value) {
 }
 
 
-void orderID(double IConstant) {
+void orderID(double IConstant, double timeConstant) {
     dt = Brain.timer(sec) - prevTime;
+    //First-order IIR (Infinite Impulse Response)
 
     if (IConstant == kI) {
-        ef = ((driveAlpha * error + (1 - driveAlpha) * driveAlpha) * pref);
+        driveAlpha = timeConstant / (timeConstant + dt);
+        beta = 1 - driveAlpha;
+        derivative = driveAlpha * prevDerivative + beta * (error - prevError);
     }
     else if (IConstant == turnKI) {
-        ef = ((turnAlpha * error + (1 - turnAlpha) * turnAlpha) * pref);
+        turnAlpha = timeConstant / (timeConstant + dt);
+        beta = 1 - turnAlpha;
+        derivative = turnAlpha * prevDerivative + beta * (error - prevError);
     }
-    derivative = (ef - pref) / dt;
+
+    //Other derivatives above <PID_Tag>
     integral += error * dt;
     if (std::abs(integral * IConstant) > integralCap) {
         integral = integralCap / IConstant * sgn(error);
@@ -68,6 +76,5 @@ void orderID(double IConstant) {
 
 void resetID() {
     integral = 0;
-    ef = 0;
     error = 0;
 }

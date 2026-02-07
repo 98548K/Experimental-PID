@@ -55,7 +55,7 @@ extern double resetCurrentPosition;
 extern double storedHeading;
 extern double startTimer;
 
-extern double maxRamp;
+extern double rampRate;
 
 extern double integralCap;
 
@@ -74,7 +74,24 @@ extern double returnRate;
 
 extern double slewLimit;
 
-extern double ef;
-extern double pref;
+
 extern double driveAlpha;
 extern double turnAlpha;
+
+extern double beta;
+
+extern double acceleration;
+
+extern double kA;
+extern double turnKA;
+
+extern double kS;
+extern double turnKS;
+
+extern double kTime;
+extern double turnKTime;
+
+extern double prevDerivative;
+
+extern double minimum;
+extern double maximum;

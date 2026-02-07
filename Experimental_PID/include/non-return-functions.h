@@ -14,6 +14,6 @@ void printAtTop(double value);
 void printAtTop(const char * value);
 
 
-void orderID(double IConstant);
+void orderID(double IConstant, double timeConstant);
 
 void resetID();

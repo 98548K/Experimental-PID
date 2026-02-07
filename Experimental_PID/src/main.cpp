@@ -12,6 +12,7 @@
 using namespace vex;
 using namespace std;
 
+
 // A global instance of competition
 competition Competition;
 
@@ -38,7 +39,7 @@ void autonomous(void) {
     schedule("Basic");
     wait (3, sec);
     Controller1.Screen.print("Calibrated");
-    chassis.drive(24, 100);
+    chassis.drive(12, 50);
 }
 
 /*---------------------------------------------------------------------------*/

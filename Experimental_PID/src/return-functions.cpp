@@ -1,9 +1,22 @@
 #include "vex.h"
 
+double min(double uno, double dos) {
+    if (uno <= dos) minimum = uno;
+    else if (dos < uno) minimum = dos;
+    return minimum;
+}
+
+double max(double uno, double dos) {
+    if (uno >= dos) maximum = uno;
+    else if (dos > uno) maximum = dos;
+    return maximum;
+}
+
 
 //Formula = ouput + feed forward
-double feedForward(double iAmSpeed, double constant) {
-    return iAmSpeed * constant * sgn(error);
+double feedForward(double iAmSpeed, double constant, double constant2, double constant3) {
+    acceleration = (pwr - prevPwr) / dt;
+    return (iAmSpeed * constant) + (acceleration * constant2) + (constant3) * sgn(error);
 }
 
 //Function that returns the output value:
@@ -11,16 +24,16 @@ double PID_math(double desiredValue, const char* assigned, double KP, double KI,
     //Error definition using the control ID:
     //The integral capacity is 30% velocity
     if (assigned == driveID) {
-        error = desiredValue - resetCurrentPosition;
+        error = desiredValue - rampUp(resetCurrentPosition, desiredValue);
         //Updates integral and derivative
-        orderID(kI);
-        feedBack = feedForward(vel, kV);
+        orderID(kI, kTime);
+        feedBack = feedForward(vel, kV, kA, kS);
     }
     else if (assigned == turnID) {
-        error = constrainAngle((desiredValue-  Inertial1.heading(deg)));
+        error = constrainAngle((desiredValue - rampUp(Inertial1.heading(deg), desiredValue)));
         //Updates integral and derivative
-        orderID(turnKI);
-        feedBack = feedForward(vel, turnKV);
+        orderID(turnKI, turnKTime);
+        feedBack = feedForward(vel, turnKV, turnKA, turnKS);
     }
 
     //Other error updates above <PID_Tag>:
@@ -30,7 +43,7 @@ double PID_math(double desiredValue, const char* assigned, double KP, double KI,
 
 
     //Return the speed:
-    return pwr/* + feedBack*/;
+    return pwr + feedBack;
 }
 
 
@@ -49,18 +62,10 @@ double slewRate(double output, double prevOutput, double error, double desiredVa
     return returnSpeed;
 }
 
-double rampUp(double setPoint, double currentPoint) {
-    if (setPoint - currentPoint >= maxRamp) {
-        returnRate = maxRamp;
-    }
-    else if (setPoint - currentPoint < -maxRamp) {
-        returnRate = -maxRamp;
-    }
-    else {
-        returnRate = setPoint - currentPoint;
-    }
-    currentPoint += returnRate;
-    return currentPoint;
+double rampUp(double currentPosition, double setPoint) {
+    if (currentPosition < setPoint) currentPosition = min(currentPosition + rampRate * dt, setPoint);
+    else if (currentPosition >= setPoint) currentPosition = max(currentPosition - rampRate * dt, setPoint);
+    return currentPosition;
 }
 
 

@@ -7,8 +7,6 @@
 //Variable declaration:
 double error;
 double integral;
-double ef;
-double pref;
 double derivative;
 
 
@@ -22,19 +20,25 @@ double resetCurrentPosition;
 double storedHeading;
 double startTimer;
 double wheelRad = 1.0;
+double acceleration;
+double prevDerivative;
+
+double minimum;
+double maximum;
 
 //Deriviative filter constant for high frequency gain
-double driveAlpha = 0.1;
-double turnAlpha = 0.1;
+double kTime = 0.0;
+double turnKTime = 0.0;
 
-double maxRamp = 100;
+
+double rampRate = 1;
 
 double integralCap = 30;
 
 double output;
 
 //Tuning constants:
-double kP;
+double kP = 0.1;
 double kI;
 double kD;
 
@@ -42,9 +46,23 @@ double turnKP;
 double turnKI;
 double turnKD;
 
+double driveAlpha;
+double turnAlpha;
 
-double kV = 1.0;
+double beta;
+
+//The constant that sets the constant speed of the untuned PID to the desired velocity for feed forward:
+double kV = 0.0;
 double turnKV;
+
+//The constant that sets the acceleration of the feed forward:
+double kA = 0.0;
+double turnKA = 0.0;
+
+//The constant that overcomes friction for feed forward:
+double kS = 0.0;
+double turnKS = 0.0;
+
 
 double feedBack;
 
@@ -93,6 +111,8 @@ void PID::turnToHeading(double desiredValue, double vel) {
     stopMotors();
 }
 
+
+
 //Drive PID loop with proper fwd/fwd directional math and drivetrain motor control:
 void PID::drive(double desiredValue, double vel) {
     storeValues();
@@ -100,7 +120,9 @@ void PID::drive(double desiredValue, double vel) {
     while (true) {
         resetCurrentPosition = ((frontTracking.position(turns)) * (wheelRad * 2) * M_PI) - storedTrackingMeasurements;
         output = PID_math(desiredValue, driveID, p, i, d, vel);
-        printAtTop(derivative);
+        if (std::round(error) == 6) {
+            printAtTop(Drivetrain.velocity(pct));
+        }
         LeftDriveSmart.spin(fwd, output + constrainAngle(storedHeading - Inertial1.heading(deg)) * 0.1, pct);
         RightDriveSmart.spin(fwd, output - constrainAngle(storedHeading - Inertial1.heading(deg)) * 0.1, pct);
         if (error >= -driveTolerance && error <= driveTolerance) break;
@@ -161,5 +183,4 @@ void PID::driveWithPiston(double desiredValue, double vel, double deployRange) {
 }
 
 //Other functions above <PID_Tag>:
-
 PID chassis = PID(kP, kI, kD, turnKP, turnKI, turnKD);
