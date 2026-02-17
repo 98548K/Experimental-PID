@@ -16,7 +16,7 @@ pid::pid(double IntegralCap, double Ramp, double Slew, double P, double I, doubl
     T = t;
 };
 
-//Insert loop update time
+
 double pid::Speed(double error) {
     dt = Brain.timer(sec) - prevTime;
     //Update alpha and beta for filtered derivative
@@ -31,6 +31,7 @@ double pid::Speed(double error) {
         integral = integralCap / i * sgn(error);
     }
     
+    //Normal PID without extensions
     pwr = (error * p) + (integral * i) + (derivative * d);
 
     return pwr;
@@ -51,10 +52,10 @@ double pid::RampUp(double setPoint, double currentSetpoint) {
 double pid::SlewRate(double output, double prevOutput, double error, double desiredValue) {
     //Slew rate is slewLimit% velocity
     if (output > prevOutput + slew && std::round(error) == desiredValue) {
-        returnSpeed = prevOutput + (slew);
+        returnSpeed = prevOutput + slew;
     }
     else if (output < prevOutput - slew && std::round(error) == desiredValue) {
-        returnSpeed = prevOutput - (slew);
+        returnSpeed = prevOutput - slew;
     }
     else {
         returnSpeed = output;
@@ -74,7 +75,7 @@ void pid::Update(double error, double output) {
     prevTime = Brain.timer(sec);
 }
 
-void pid::reset(double error) {
+void pid::Reset(double error) {
     error = 0;
     integral = 0;
 }

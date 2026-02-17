@@ -23,5 +23,5 @@ class pid {
     double SlewRate(double output, double prevOutput, double error, double desiredValue);
     double PrevPwr();
     void Update(double error, double output);
-    void reset(double error);
+    void Reset(double error);
 };

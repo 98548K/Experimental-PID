@@ -40,13 +40,12 @@ chassis::chassis(double KP, double KI, double KD, double KS, double KA, double K
     TurnSlewLimit = turnSlewLimit;
 };
 
-pid turnPID;
-pid antiDriftPID;
-pid drivePID;
+pid turnPID = pid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+pid drivePID = pid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
 //Turn PID function
 void chassis::turnToHeading(double desiredHeading, double speed) {
-    turnPID.reset(turnError);
+    //turnPID.Reset(turnError);
     while (true) {
         //Sets the turn PID construct
         turnPID = pid(turnIntegralCap, turnRampRate, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
@@ -75,34 +74,34 @@ void chassis::driveDist(double desiredDist, double speed) {
     //Store sensor values
     storedTrackingMeasurements = (frontTracking.position(turns)) * (wheelRad * 2) * M_PI;
     storedHeading = Inertial1.heading(deg);
-    drivePID.reset(driveError);
-    antiDriftPID.reset(turnError);
+    drivePID.Reset(driveError);
+    turnPID.Reset(turnError);
     while (true) {
         resetCurrentPosition = desiredDist - (((frontTracking.position(turns)) * (wheelRad * 2) * M_PI) - storedTrackingMeasurements);
         //Sets drive PID constructs
         drivePID = pid(driveIntegralCap, driveRampRate, driveSlewLimit, kP, kI, kD, kS, kA, kV, kT);
         
         //Sets turn PID constructs for anti drift
-        antiDriftPID = pid(turnIntegralCap, turnRampRate, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
+        turnPID = pid(turnIntegralCap, turnRampRate, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
 
         //Errors
         driveError = desiredDist - drivePID.RampUp(resetCurrentPosition, desiredDist);
-        turnError = constrainAngle(storedHeading - antiDriftPID.RampUp(Inertial1.heading(deg), storedHeading));
+        turnError = constrainAngle(storedHeading - turnPID.RampUp(Inertial1.heading(deg), storedHeading));
 
         //Raw speed calculations
         rawDriveOutput = drivePID.Speed(driveError) + drivePID.Feedforward(speed, driveError);
-        rawTurnOutput = antiDriftPID.Speed(turnError);
+        rawTurnOutput = turnPID.Speed(turnError);
 
         //Speed calculations
         driveOutput = drivePID.SlewRate(rawDriveOutput, drivePID.PrevPwr(), driveError, desiredDist);
-        turnOutput = antiDriftPID.SlewRate(rawTurnOutput, antiDriftPID.PrevPwr(), turnError, storedHeading);
+        turnOutput = turnPID.SlewRate(rawTurnOutput, turnPID.PrevPwr(), turnError, storedHeading);
 
         //Spin drivetrain motors
         LeftDriveSmart.spin(fwd, (driveOutput + turnOutput), pct);
         RightDriveSmart.spin(fwd, (driveOutput - turnOutput), pct);
 
         drivePID.Update(driveError, driveOutput);
-        antiDriftPID.Update(turnError, turnOutput);
+        turnPID.Update(turnError, turnOutput);
         //Refresh loop and prevent buildup
         wait (updateTime, msec);
     }
