@@ -1,8 +1,7 @@
 #include "vex.h"
 
-pid::pid(double IntegralCap, double Ramp, double Slew, double P, double I, double D, double S, double A, double V, double T) {
+pid::pid(double IntegralCap, double Slew, double P, double I, double D, double S, double A, double V, double T) {
     IntegralCap = integralCap;
-    Ramp = ramp;
     Slew = slew;
     //PID gains
     P = p;
@@ -42,10 +41,32 @@ double pid::Feedforward(double setSpeed, double error) {
     return (setSpeed * v) + (acceleration * a) + (s) * sgn(error);
 }
 
-double pid::RampUp(double setPoint, double currentSetpoint) {
-    if (currentSetpoint < setPoint) currentSetpoint = min(currentSetpoint + ramp * dt, setPoint);
-    else if (currentSetpoint >= setPoint) currentSetpoint = max(currentSetpoint - ramp * dt, setPoint);
-    return currentSetpoint;
+double pid::RampUp(double setPoint, double maxAccel, double maxVel) {
+    //Remaining distance to get to the destination
+    profiledError = setPoint - profiledSetpoint;
+    //Squares the current velocity and divides that amount by double the max acceleration
+    stoppingDistance = (currentVelocity * currentVelocity) / (2 * maxAccel);
+    //Finds out if the direction is positive or negative and returns a positive or negative one depending on if the condition is true or false
+    direction = (profiledError > 0) ? 1.0 : -1.0;
+    //Ramps up if the ramped error is not close to the stopping distance
+    if (std::abs(profiledError) > stoppingDistance) {
+        currentVelocity += maxAccel * dt;
+    }
+    //Ramps down if the ramped error is close to the stopping distance
+    else {
+        currentVelocity -= maxAccel * dt;
+    }
+    //Constrains the curent velocity to the maximum velocity
+    if (currentVelocity > maxVel) currentVelocity = maxVel;
+    //Ensures that the current velocity does not dip below 0
+    if (currentVelocity < 0) currentVelocity = 0;
+    
+    profiledSetpoint += currentVelocity * direction * dt;
+    if (std::abs(profiledError) < 0.05) {
+        profiledSetpoint = setPoint;
+        currentVelocity = 0;
+    }
+    return profiledSetpoint;
 }
 
 //If the delta speed is greater than the slew rate, the speed will be set to the previous speed plus slew rate cap:

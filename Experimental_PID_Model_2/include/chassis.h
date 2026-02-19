@@ -8,8 +8,10 @@ class chassis {
     double kS, kA, kV, turnKS, turnKA, turnKV;
     //Derivative filtering time constants
     double kT, turnKT;
-    //Ramp up rate gains
-    double driveRampRate, turnRampRate;
+    //Ramp up acceleration gains
+    double turnKAccel, turnKVel;
+    //Ramp up max velocity gains
+    double kAccel, kVel;
     //Integral capacity in percentage
     double driveIntegralCap, turnIntegralCap;
     //Maximum slew
@@ -26,8 +28,15 @@ class chassis {
     //Sensor values
     double storedTrackingMeasurements, storedHeading;
     double resetCurrentPosition;
+    //Curvature
+    double calculatedHeading, linearVel, turnVel;
     public:
-    chassis(double KP, double KI, double KD, double KS, double KA, double KV, double KT, double DriveRampRate, double DriveIntegralCap, double DriveSlewLimit, double TurnKP, double TurnKI, double TurnKD, double TurnKS, double TurnKA, double TurnKV, double TurnKT, double TurnRampRate, double TurnIntegralCap, double turnSlewLimit);
-    void driveDist(double desiredDist, double speed);
-    void turnToHeading(double desiredHeading, double speed);
+    chassis(double KP, double KI, double KD, double KS, double KA, double KV, double KT, double DriveIntegralCap, double DriveSlewLimit, double KAccel, double KVel, double TurnKP, double TurnKI, double TurnKD, double TurnKS, double TurnKA, double TurnKV, double TurnKT, double TurnIntegralCap, double TurnSlewLimit, double TurnKAccel, double TurnKVel);
+    void turnToHeading(double desiredHeading, double speed, double timer = 0);
+    void driveDist(double desiredDist, double speed, double timer = 0);
+    void findCurvature(double desiredX, double desiredY);
 };
+
+extern pid turnPID;
+extern pid drivePID;
+extern double wheelRad;

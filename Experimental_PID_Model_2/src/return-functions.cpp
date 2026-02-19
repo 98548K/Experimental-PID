@@ -23,6 +23,12 @@ double constrainAngle(double x) {
     return x - 180;
 }
 
+double validateHeading(double bestHeading) {
+    if (bestHeading < 0) bestHeading += 360;
+    if (bestHeading > 360) bestHeading -= 360;
+    return bestHeading;
+}
+
 double min(double uno, double dos) {
     if (uno <= dos) minimum = uno;
     else if (dos < uno) minimum = dos;

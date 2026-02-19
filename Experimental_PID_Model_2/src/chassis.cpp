@@ -4,8 +4,12 @@
 int updateTime = 20;
 double wheelRad = 1.0;
 
+//Tolerances
+double driveTolerance = 0.0;
+double turnTolerance = 0.0;
+
 //Tune gains:
-chassis::chassis(double KP, double KI, double KD, double KS, double KA, double KV, double KT, double DriveRampRate, double DriveIntegralCap, double DriveSlewLimit, double TurnKP, double TurnKI, double TurnKD, double TurnKS, double TurnKA, double TurnKV, double TurnKT, double TurnRampRate, double TurnIntegralCap, double TurnSlewLimit) {
+chassis::chassis(double KP, double KI, double KD, double KS, double KA, double KV, double KT, double DriveIntegralCap, double DriveSlewLimit, double KAccel, double KVel, double TurnKP, double TurnKI, double TurnKD, double TurnKS, double TurnKA, double TurnKV, double TurnKT, double TurnIntegralCap, double TurnSlewLimit, double TurnKAccel, double TurnKVel) {
     //Drive PID gains
     KP = kP;
     KI = kI;
@@ -16,12 +20,14 @@ chassis::chassis(double KP, double KI, double KD, double KS, double KA, double K
     KV = kV;
     //Drive filtered derivative gain (Time constant)
     KT = kT;
-    //Drive ramp up rate
-    DriveRampRate = driveRampRate;
     //Drive integral capacity
     DriveIntegralCap = driveIntegralCap;
     //Drive slew rate
     DriveSlewLimit = driveSlewLimit;
+    //Max acceleration gain for drive ramp up
+    KAccel = kAccel;
+    //Max velocity gain for drive ramp up
+    KVel = kVel;
     //Turn PID gains
     TurnKP = turnKP;
     TurnKI = turnKI;
@@ -32,26 +38,29 @@ chassis::chassis(double KP, double KI, double KD, double KS, double KA, double K
     TurnKV = turnKV;
     //Turn filtered derivative gain (Time constant)
     TurnKT = turnKT;
-    //Turn ramp up rate
-    TurnRampRate = turnRampRate;
     //Turn integral capacity
     TurnIntegralCap = turnIntegralCap;
     //Turn slew rate
     TurnSlewLimit = turnSlewLimit;
+    //Max acceleration gain for turn ramp up
+    TurnKAccel = turnKAccel;
+    //Max velocity gain for turn ramp up
+    TurnKVel = turnKVel;
 };
 
-pid turnPID = pid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-pid drivePID = pid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+pid turnPID = pid(0, 0, 0, 0, 0, 0, 0, 0, 0);
+pid drivePID = pid(0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-//Turn PID function
-void chassis::turnToHeading(double desiredHeading, double speed) {
-    //turnPID.Reset(turnError);
+
+//Turn PID function with tolerance
+void chassis::turnToHeading(double desiredHeading, double speed, double timer) {
+    turnPID.Reset(turnError);
     while (true) {
         //Sets the turn PID construct
-        turnPID = pid(turnIntegralCap, turnRampRate, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
+        turnPID = pid(turnIntegralCap, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
 
         //Turn error
-        turnError = constrainAngle(desiredHeading - turnPID.RampUp(Inertial1.heading(deg), desiredHeading));
+        turnError = constrainAngle(turnPID.RampUp(desiredHeading, turnKAccel, turnKVel) - Inertial1.heading(deg));
 
         //Raw speed calculation
         rawTurnOutput = turnPID.Speed(turnError) + turnPID.Feedforward(speed, turnError);
@@ -64,13 +73,19 @@ void chassis::turnToHeading(double desiredHeading, double speed) {
         RightDriveSmart.spin(reverse, turnOutput, pct);
 
         turnPID.Update(turnError, turnOutput);
+
+        //Turn exit condition
+        if (turnError > -turnTolerance && turnError < turnTolerance && timer == 0) break;
+        else if (Brain.timer(sec) >= timer && timer != 0) break;
+
         //Refresh loop and prevent buildup
         wait (updateTime, msec);
     }
+    Drivetrain.stop(hold);
 }
 
 //Drive PID function
-void chassis::driveDist(double desiredDist, double speed) {
+void chassis::driveDist(double desiredDist, double speed, double timer) {
     //Store sensor values
     storedTrackingMeasurements = (frontTracking.position(turns)) * (wheelRad * 2) * M_PI;
     storedHeading = Inertial1.heading(deg);
@@ -79,14 +94,14 @@ void chassis::driveDist(double desiredDist, double speed) {
     while (true) {
         resetCurrentPosition = desiredDist - (((frontTracking.position(turns)) * (wheelRad * 2) * M_PI) - storedTrackingMeasurements);
         //Sets drive PID constructs
-        drivePID = pid(driveIntegralCap, driveRampRate, driveSlewLimit, kP, kI, kD, kS, kA, kV, kT);
-        
+        drivePID = pid(driveIntegralCap, driveSlewLimit, kP, kI, kD, kS, kA, kV, kT);
+
         //Sets turn PID constructs for anti drift
-        turnPID = pid(turnIntegralCap, turnRampRate, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
+        turnPID = pid(turnIntegralCap, turnSlewLimit, turnKP, turnKI, turnKD, turnKS, turnKA, turnKV, turnKT);
 
         //Errors
-        driveError = desiredDist - drivePID.RampUp(resetCurrentPosition, desiredDist);
-        turnError = constrainAngle(storedHeading - turnPID.RampUp(Inertial1.heading(deg), storedHeading));
+        driveError = drivePID.RampUp(desiredDist, kAccel, kVel) - resetCurrentPosition;
+        turnError = constrainAngle(turnPID.RampUp(storedHeading, turnKAccel, turnKVel) - Inertial1.heading(deg));
 
         //Raw speed calculations
         rawDriveOutput = drivePID.Speed(driveError) + drivePID.Feedforward(speed, driveError);
@@ -102,7 +117,17 @@ void chassis::driveDist(double desiredDist, double speed) {
 
         drivePID.Update(driveError, driveOutput);
         turnPID.Update(turnError, turnOutput);
+
+        //Drive exit condition
+        if (driveError > -driveTolerance && driveError < driveTolerance && timer == 0) break;
+        else if (Brain.timer(sec) >= timer && timer != 0) break;
+
         //Refresh loop and prevent buildup
         wait (updateTime, msec);
     }
+    Drivetrain.stop(hold);
+}
+
+void chassis::findCurvature(double desiredX, double desiredY) {
+
 }

@@ -15,11 +15,13 @@ chassis Chassis = chassis(
     0.0,
     //Drive filtered derivative time constant
     0.0,
-    //Drive ramp rate gain
-    0.0,
     //Drive integral capacity percentage
     0.0,
     //Drive slew limit
+    0.0,
+    //Drive max acceleration gain
+    0.0,
+    //Drive max velocity gain
     0.0,
     //Turn proportional gain:
     0.0,
@@ -35,10 +37,12 @@ chassis Chassis = chassis(
     0.0,
     //Turn filtered derivative time constant
     0.0,
-    //Turn ramp rate gain
-    0.0,
     //Turn integral capacity percentage
     0.0,
     //Turn slew limit
+    0.0,
+    //Turn max acceleration gain
+    0.0,
+    //Turn max velocity gain
     0.0
 );
