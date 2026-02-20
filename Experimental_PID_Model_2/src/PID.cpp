@@ -16,7 +16,7 @@ pid::pid(double IntegralCap, double Slew, double P, double I, double D, double S
 };
 
 
-double pid::Speed(double error) {
+double pid::Speed(double error, double setPoint) {
     dt = Brain.timer(sec) - prevTime;
     //Update alpha and beta for filtered derivative
     alpha = t / (t + dt);
@@ -26,8 +26,13 @@ double pid::Speed(double error) {
 
     //Update the integral
     integral += error * dt;
+    //Clamps integral
     if (std::abs(integral * i) > integralCap) {
         integral = integralCap / i * sgn(error);
+    }
+    //Disables integral if overshoot
+    else if ((error < 0 && setPoint >= 0) || (error >= 0 && setPoint < 0)) {
+        integral = 0;
     }
     
     //Normal PID without extensions

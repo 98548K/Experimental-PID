@@ -63,7 +63,7 @@ void chassis::turnToHeading(double desiredHeading, double speed, double timer) {
         turnError = constrainAngle(turnPID.RampUp(desiredHeading, turnKAccel, turnKVel) - Inertial1.heading(deg));
 
         //Raw speed calculation
-        rawTurnOutput = turnPID.Speed(turnError) + turnPID.Feedforward(speed, turnError);
+        rawTurnOutput = turnPID.Speed(turnError, desiredHeading) + turnPID.Feedforward(speed, turnError);
 
         //Speed calculation
         turnOutput = turnPID.SlewRate(rawTurnOutput, turnPID.PrevPwr(), turnError, desiredHeading);
@@ -104,8 +104,8 @@ void chassis::driveDist(double desiredDist, double speed, double timer) {
         turnError = constrainAngle(turnPID.RampUp(storedHeading, turnKAccel, turnKVel) - Inertial1.heading(deg));
 
         //Raw speed calculations
-        rawDriveOutput = drivePID.Speed(driveError) + drivePID.Feedforward(speed, driveError);
-        rawTurnOutput = turnPID.Speed(turnError);
+        rawDriveOutput = drivePID.Speed(driveError, desiredDist) + drivePID.Feedforward(speed, driveError);
+        rawTurnOutput = turnPID.Speed(turnError, storedHeading);
 
         //Speed calculations
         driveOutput = drivePID.SlewRate(rawDriveOutput, drivePID.PrevPwr(), driveError, desiredDist);
